@@ -33,4 +33,10 @@ func TestContext(t *testing.T) {
 	fmt.Println(contextE)
 	fmt.Println(contextF)
 	fmt.Println(contextG)
+
+	// kode context get value, ini akan bertanya ke parent bukan ke childnya.
+	fmt.Println("Context F:", contextF.Value("f"))
+	fmt.Println("Context F:", contextF.Value("c"))
+	fmt.Println("Context F:", contextF.Value("b")) // beda parent, maka tidak dapat
+	fmt.Println("Context A:", contextA.Value("b"))
 }
