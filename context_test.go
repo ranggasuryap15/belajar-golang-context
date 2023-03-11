@@ -3,6 +3,7 @@ package belajar_golang_context
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"testing"
 )
 
@@ -39,4 +40,34 @@ func TestContext(t *testing.T) {
 	fmt.Println("Context F:", contextF.Value("c"))
 	fmt.Println("Context F:", contextF.Value("b")) // beda parent, maka tidak dapat
 	fmt.Println("Context A:", contextA.Value("b"))
+}
+
+func CreateCounter() chan int {
+	destination := make(chan int)
+
+	go func() {
+		defer close(destination)
+
+		counter := 1
+		for {
+			destination <- counter
+			counter++
+		}
+	}()
+	return destination
+}
+
+func TestContextWithCancel(t *testing.T) {
+	fmt.Println("Total Goroutine (sebelum)", runtime.NumGoroutine())
+
+	destination := CreateCounter()
+	for n := range destination {
+		fmt.Println("Counter", n)
+		if n == 10 {
+			break
+		}
+	}
+
+	fmt.Println("Total Goroutine (Sesudah)", runtime.NumGoroutine()) // disini goroutine masih nyala padahal kita sudah tidak butuh lagi
+	// sangat berbahaya jika goroutine yang masih nyala
 }
