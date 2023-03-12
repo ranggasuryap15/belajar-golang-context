@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestContext(t *testing.T) {
@@ -42,7 +43,7 @@ func TestContext(t *testing.T) {
 	fmt.Println("Context A:", contextA.Value("b"))
 }
 
-func CreateCounter() chan int {
+func CreateCounter(ctx context.Context) chan int {
 	destination := make(chan int)
 
 	go func() {
@@ -50,24 +51,61 @@ func CreateCounter() chan int {
 
 		counter := 1
 		for {
-			destination <- counter
-			counter++
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				destination <- counter
+				counter++
+				time.Sleep(1 * time.Second) // simulasi slow
+			}
 		}
 	}()
+
 	return destination
 }
 
 func TestContextWithCancel(t *testing.T) {
-	fmt.Println("Total Goroutine (sebelum)", runtime.NumGoroutine())
+	fmt.Println(runtime.NumGoroutine())
 
-	destination := CreateCounter()
+	parent := context.Background()
+	ctx, cancel := context.WithCancel(parent)
+	destination := CreateCounter(ctx)
+
 	for n := range destination {
 		fmt.Println("Counter", n)
 		if n == 10 {
 			break
 		}
 	}
+	cancel()
 
 	fmt.Println("Total Goroutine (Sesudah)", runtime.NumGoroutine()) // disini goroutine masih nyala padahal kita sudah tidak butuh lagi
 	// sangat berbahaya jika goroutine yang masih nyala
+}
+
+func TestContextWithTimeOut(t *testing.T) {
+	fmt.Println(runtime.NumGoroutine())
+	parent := context.Background()
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+	defer cancel()
+
+	destination := CreateCounter(ctx)
+	for n := range destination {
+		fmt.Println("Counter", n)
+	}
+	fmt.Println(runtime.NumGoroutine())
+}
+
+func TestContextWithDuration(t *testing.T) {
+	fmt.Println("Goroutine", runtime.NumGoroutine())
+	parent := context.Background()
+	ctx, cancel := context.WithDeadline(parent, time.Now().Add(5*time.Second))
+	defer cancel()
+
+	destination := CreateCounter(ctx)
+	for n := range destination {
+		fmt.Println("Counter", n)
+	}
+	fmt.Println("Goroutine", runtime.NumGoroutine())
 }
